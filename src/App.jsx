@@ -1,30 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePeer } from "./hooks/usePeer.js";
+import { useMesh } from "./hooks/useMesh.js";
 import { clearHistory, loadItems, saveItem } from "./lib/history.js";
 import Logo from "./components/Logo.jsx";
-import RoomBar from "./components/RoomBar.jsx";
+import DeviceManager from "./components/DeviceManager.jsx";
 import Composer from "./components/Composer.jsx";
 import Feed from "./components/Feed.jsx";
+import ChainManager from "./components/ChainManager.jsx";
 import HistoryPanel from "./components/HistoryPanel.jsx";
 
 export default function App() {
-  const [items, setItems] = useState([]); // live feed (this session)
+  const [items, setItems] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
   const historyLoaded = useRef(false);
 
-  // Every sent or received item lands here: show it at the top of the feed and
-  // quietly save a copy to this device's local history.
+  // Every sent or received item shows at the top of the feed and is saved to
+  // this device's own local history.
   const handleItem = useCallback((item) => {
     setItems((prev) => [item, ...prev]);
     saveItem(item);
   }, []);
 
-  const { status, code, role, isConnected, transfers, sendText, sendFile } = usePeer({
-    onItem: handleItem,
-  });
+  const {
+    self,
+    devices,
+    rules,
+    statuses,
+    transfers,
+    connectedCount,
+    sendText,
+    sendFile,
+    revoke,
+    setRule,
+    renameSelf,
+    createPairingUrl,
+  } = useMesh({ onItem: handleItem });
 
-  // Load saved history the first time the panel is opened.
   useEffect(() => {
     if (historyOpen && !historyLoaded.current) {
       historyLoaded.current = true;
@@ -46,13 +57,22 @@ export default function App() {
             Zenith<span className="app__logo-accent">Transfer</span>
           </span>
         </h1>
-        <p className="app__tag">Drop it here, grab it there. Direct, private, no size limits.</p>
+        <p className="app__tag">Link your devices once. Send anything, any time they're both open.</p>
       </header>
 
       <main className="app__main">
-        <RoomBar code={code} role={role} status={status} />
-        <Composer disabled={!isConnected} onSendText={sendText} onSendFile={sendFile} />
+        <DeviceManager
+          self={self}
+          devices={devices}
+          statuses={statuses}
+          connectedCount={connectedCount}
+          onRevoke={revoke}
+          onRename={renameSelf}
+          createPairingUrl={createPairingUrl}
+        />
+        <Composer disabled={connectedCount === 0} onSendText={sendText} onSendFile={sendFile} />
         <Feed items={items} transfers={transfers} />
+        <ChainManager self={self} devices={devices} rules={rules} onSetRule={setRule} />
         <HistoryPanel
           open={historyOpen}
           items={historyItems}
@@ -62,7 +82,7 @@ export default function App() {
       </main>
 
       <footer className="app__footer">
-        Files stream directly between your devices — nothing is stored on a server. Both devices must be open at the same time.
+        Items stream directly between your devices — nothing is stored on a server. Devices must be open at the same time to transfer.
       </footer>
     </div>
   );

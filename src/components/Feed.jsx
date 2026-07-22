@@ -12,7 +12,8 @@ function formatSize(bytes) {
 }
 
 function ItemCard({ item }) {
-  const dirLabel = item.dir === "out" ? "Sent" : "Received";
+  const dirLabel =
+    item.dir === "out" ? "Sent" : item.from ? `From ${item.from}` : "Received";
 
   if (item.kind === "link") {
     return (

@@ -58,7 +58,7 @@ export default function Composer({ disabled, onSendText, onSendFile }) {
         className="composer__text"
         placeholder={
           disabled
-            ? "Waiting for the other device to connect…"
+            ? "No devices online — link one above, or wait for it to come online…"
             : "Type or paste text, a link, or an image here…"
         }
         value={text}
