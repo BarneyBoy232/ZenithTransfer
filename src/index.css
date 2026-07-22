@@ -1,18 +1,19 @@
 :root {
-  --bg: #0b0f19;
-  --bg-soft: #131a2a;
-  --card: #172033;
-  --card-in: #14233a;
-  --border: #263349;
-  --text: #eef2fb;
-  --muted: #9aa7c2;
-  --accent: #6ea8fe;
-  --accent-2: #a78bfa;
+  --bg: #14120f;
+  --bg-soft: #1b1813;
+  --card: #23201b;
+  --card-in: #2a251d;
+  --border: #3a352c;
+  --text: #f4efe7;
+  --muted: #b3a99a;
+  --accent: #f59e0b;
+  --accent-2: #fb7185;
+  --field: #17140f;
   --good: #34d399;
   --warn: #fbbf24;
   --bad: #f87171;
   --radius: 14px;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -26,7 +27,7 @@ body {
 }
 
 body {
-  background: radial-gradient(1200px 600px at 50% -10%, #1a2440 0%, var(--bg) 60%);
+  background: radial-gradient(1200px 600px at 50% -10%, #2a2318 0%, var(--bg) 60%);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   min-height: 100vh;
@@ -152,7 +153,7 @@ body {
 }
 .composer--drag {
   border-color: var(--accent);
-  background: linear-gradient(180deg, #16233f, #1a2748);
+  background: linear-gradient(180deg, #2a2318, #322a1c);
 }
 .composer--disabled {
   opacity: 0.7;
@@ -161,7 +162,7 @@ body {
   width: 100%;
   min-height: 96px;
   resize: vertical;
-  background: #0e1524;
+  background: var(--field);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -188,7 +189,7 @@ body {
 /* Buttons */
 .btn {
   border: 1px solid var(--border);
-  background: #0e1524;
+  background: var(--field);
   color: var(--text);
   padding: 10px 16px;
   border-radius: 10px;
@@ -245,7 +246,7 @@ body {
 }
 .card--in {
   background: var(--card-in);
-  border-color: #2b405f;
+  border-color: #4a4232;
 }
 .card__tag {
   font-size: 0.72rem;
@@ -292,7 +293,7 @@ body {
 }
 .progress__bar {
   height: 8px;
-  background: #0e1524;
+  background: var(--field);
   border-radius: 999px;
   overflow: hidden;
 }
