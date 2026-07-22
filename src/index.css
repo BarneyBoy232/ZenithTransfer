@@ -43,6 +43,14 @@ body {
   gap: 18px;
 }
 
+/* Stack the main panels (pairing, composer, feed, history) with breathing room
+   so they don't touch. */
+.app__main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* Header */
 .app__header {
   text-align: center;
