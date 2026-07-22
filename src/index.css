@@ -54,15 +54,12 @@ body {
   align-items: center;
   gap: 10px;
 }
-.app__logo-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #0b0f19;
-  font-weight: 800;
+.app__logo-text {
+  font-weight: 600;
+}
+.app__logo-accent {
+  color: var(--accent);
+  font-weight: 400;
 }
 .app__tag {
   color: var(--muted);

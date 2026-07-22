@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePeer } from "./hooks/usePeer.js";
 import { clearHistory, loadItems, saveItem } from "./lib/history.js";
+import Logo from "./components/Logo.jsx";
 import RoomBar from "./components/RoomBar.jsx";
 import Composer from "./components/Composer.jsx";
 import Feed from "./components/Feed.jsx";
@@ -40,7 +41,10 @@ export default function App() {
     <div className="app">
       <header className="app__header">
         <h1 className="app__logo">
-          <span className="app__logo-mark">⇅</span> ZenithTransfer
+          <Logo size={40} />
+          <span className="app__logo-text">
+            Zenith<span className="app__logo-accent">Transfer</span>
+          </span>
         </h1>
         <p className="app__tag">Drop it here, grab it there. Direct, private, no size limits.</p>
       </header>
