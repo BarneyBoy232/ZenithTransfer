@@ -73,11 +73,10 @@ body {
 .composer,
 .feed,
 .history {
-  background: linear-gradient(180deg, var(--bg-soft), var(--card));
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
-  box-shadow: var(--shadow);
 }
 
 /* Status */
@@ -212,9 +211,9 @@ body {
   cursor: not-allowed;
 }
 .btn--primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: var(--accent);
   border: none;
-  color: #0b0f19;
+  color: #241a06;
 }
 .btn--ghost {
   background: transparent;
@@ -299,7 +298,7 @@ body {
 }
 .progress__fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--accent);
   transition: width 0.15s;
 }
 
