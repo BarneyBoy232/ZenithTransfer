@@ -344,6 +344,28 @@ body {
   flex-direction: column;
   gap: 12px;
 }
+.banner {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+}
+.banner--pending {
+  background: rgba(110, 168, 254, 0.12);
+  border-color: rgba(110, 168, 254, 0.4);
+  color: var(--accent);
+}
+.banner--ok {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: var(--good);
+}
+.banner--bad {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: var(--bad);
+}
 .devices__self,
 .devices__head {
   display: flex;

@@ -20,6 +20,10 @@ export function useMesh({ onItem } = {}) {
   const [rules, setRules] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [transfers, setTransfers] = useState({});
+  const [pairingStatus, setPairingStatus] = useState(null); // null|'pairing'|'paired'|'failed'
+  const joiningRef = useRef(false);
+  const failTimerRef = useRef(null);
+  const paidTimerRef = useRef(null);
 
   const refresh = useCallback(() => {
     const mesh = meshRef.current;
@@ -42,13 +46,24 @@ export function useMesh({ onItem } = {}) {
   }, []);
 
   useEffect(() => {
+    // Clear any stale pairing code left over from a previous session, so a code
+    // is only ever "live" while the Add-device panel is actually open.
+    clearPairingSecret();
+
     const mesh = createMesh({
       onItem: (item) => onItemRef.current && onItemRef.current(item),
       onProgress: reportProgress,
       onChange: refresh,
       onPaired: () => {
-        clearPairingSecret(); // one QR pairs one device; re-open to add another
         refresh();
+        // Only the device that scanned the link shows a "linked" banner. The
+        // inviter keeps its code live so more devices can pair from the same QR.
+        if (joiningRef.current) {
+          joiningRef.current = false;
+          if (failTimerRef.current) clearTimeout(failTimerRef.current);
+          setPairingStatus("paired");
+          paidTimerRef.current = setTimeout(() => setPairingStatus(null), 4000);
+        }
       },
     });
     meshRef.current = mesh;
@@ -59,11 +74,25 @@ export function useMesh({ onItem } = {}) {
     const match = window.location.hash.match(/pair=([^&]+)/);
     if (match) {
       const payload = decodePairing(match[1]);
-      if (payload) mesh.joinFromPayload(payload);
+      if (payload) {
+        joiningRef.current = true;
+        setPairingStatus("pairing");
+        mesh.joinFromPayload(payload);
+        failTimerRef.current = setTimeout(() => {
+          if (joiningRef.current) {
+            joiningRef.current = false;
+            setPairingStatus("failed");
+          }
+        }, 12000);
+      }
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
 
-    return () => mesh.destroy();
+    return () => {
+      if (failTimerRef.current) clearTimeout(failTimerRef.current);
+      if (paidTimerRef.current) clearTimeout(paidTimerRef.current);
+      mesh.destroy();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -77,13 +106,17 @@ export function useMesh({ onItem } = {}) {
     setSelf({ ...updated });
   }, []);
 
-  // Build a fresh pairing link/QR (this device becomes the inviter).
+  // Build a fresh pairing link/QR (this device becomes the inviter). The code
+  // stays live so several devices can pair from the same QR until Done.
   const createPairingUrl = useCallback(() => {
     if (!self) return "";
     const secret = newPairingSecret();
     const encoded = encodePairing({ id: self.id, name: self.name, secret });
     return `${window.location.origin}${window.location.pathname}#pair=${encoded}`;
   }, [self]);
+
+  // Called when the inviter closes the Add-device panel — retire the code.
+  const stopPairing = useCallback(() => clearPairingSecret(), []);
 
   const connectedCount = Object.values(statuses).filter(Boolean).length;
 
@@ -94,6 +127,8 @@ export function useMesh({ onItem } = {}) {
     statuses,
     transfers,
     connectedCount,
+    pairingStatus,
+    stopPairing,
     sendText,
     sendFile,
     revoke,

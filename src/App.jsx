@@ -28,6 +28,8 @@ export default function App() {
     statuses,
     transfers,
     connectedCount,
+    pairingStatus,
+    stopPairing,
     sendText,
     sendFile,
     revoke,
@@ -66,8 +68,10 @@ export default function App() {
           devices={devices}
           statuses={statuses}
           connectedCount={connectedCount}
+          pairingStatus={pairingStatus}
           onRevoke={revoke}
           onRename={renameSelf}
+          onStopPairing={stopPairing}
           createPairingUrl={createPairingUrl}
         />
         <Composer disabled={connectedCount === 0} onSendText={sendText} onSendFile={sendFile} />

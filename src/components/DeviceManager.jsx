@@ -3,7 +3,26 @@ import { QRCodeSVG } from "qrcode.react";
 
 // Shows this device's name, the list of paired devices with live status, and an
 // "Add device" panel that produces a QR / link another device scans to pair.
-export default function DeviceManager({ self, devices, statuses, connectedCount, onRevoke, onRename, createPairingUrl }) {
+const PAIRING_BANNER = {
+  pairing: { text: "Linking to the other device…", cls: "banner--pending" },
+  paired: { text: "Linked ✓", cls: "banner--ok" },
+  failed: {
+    text: "Couldn't link. On the other device, tap Add device again and rescan.",
+    cls: "banner--bad",
+  },
+};
+
+export default function DeviceManager({
+  self,
+  devices,
+  statuses,
+  connectedCount,
+  pairingStatus,
+  onRevoke,
+  onRename,
+  onStopPairing,
+  createPairingUrl,
+}) {
   const [adding, setAdding] = useState(false);
   const [pairUrl, setPairUrl] = useState("");
   const [copied, setCopied] = useState(false);
@@ -30,8 +49,17 @@ export default function DeviceManager({ self, devices, statuses, connectedCount,
     setEditingName(false);
   };
 
+  const closeAdd = () => {
+    onStopPairing && onStopPairing();
+    setAdding(false);
+  };
+
+  const banner = pairingStatus && PAIRING_BANNER[pairingStatus];
+
   return (
     <section className="devices">
+      {banner && <div className={`banner ${banner.cls}`}>{banner.text}</div>}
+
       <div className="devices__self">
         <span className="devices__label">This device</span>
         {editingName ? (
@@ -93,12 +121,12 @@ export default function DeviceManager({ self, devices, statuses, connectedCount,
             <QRCodeSVG value={pairUrl} size={160} includeMargin bgColor="#ffffff" fgColor="#0b0f19" />
           </div>
           <div className="pairing__info">
-            <p className="pairing__hint">On your other device, scan this with the camera (or open the copied link). It links permanently.</p>
+            <p className="pairing__hint">Scan this with each device's camera (or open the copied link). You can link several devices from this one code — tap Done when finished. Links stay paired permanently until revoked.</p>
             <div className="pairing__actions">
               <button className="btn btn--ghost" onClick={copyLink}>
                 {copied ? "Link copied ✓" : "Copy link"}
               </button>
-              <button className="btn btn--ghost" onClick={() => setAdding(false)}>
+              <button className="btn btn--ghost" onClick={closeAdd}>
                 Done
               </button>
             </div>
