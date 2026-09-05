@@ -41,13 +41,14 @@ function uuid() {
 
 export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
   const self = getSelf();
-  const peer = new Peer(self.id, { config: ICE_CONFIG });
+  let peer = null; // (re)created by startPeer(); may be rebuilt to reclaim our id
 
   const conns = new Map(); // deviceId -> open DataConnection
   const assembling = new Map(); // fileId -> { meta, chunks, received }
   const seen = []; // recent msgIds (loop/dedupe guard)
   const seenSet = new Set();
   let reconnectTimer = null;
+  let restartTimer = null;
   let destroyed = false;
   let brokerReady = false;
   const pendingJoins = []; // pairing payloads waiting for the peer to open
@@ -330,7 +331,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
   function joinFromPayload(payload, attempt = 0) {
     if (!payload || !payload.id || payload.id === self.id) return;
     if (getDevices().some((d) => d.id === payload.id)) return; // already paired
-    if (!peer.open) {
+    if (!peer || !peer.open) {
       pendingJoins.push(payload); // run once the broker connection is ready
       return;
     }
@@ -387,7 +388,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
   // --- Auto-reconnect loop --------------------------------------------------
 
   function reconnectKnown() {
-    if (destroyed || !peer.open) return;
+    if (destroyed || !peer || !peer.open) return;
     for (const dev of getDevices()) {
       if (!conns.has(dev.id)) {
         const conn = peer.connect(dev.id, { reliable: true });
@@ -396,50 +397,113 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
     }
   }
 
-  peer.on("open", () => {
-    brokerReady = true;
-    log("matchmaker: connected — this device is now findable");
-    while (pendingJoins.length) joinFromPayload(pendingJoins.shift());
-    reconnectKnown();
-    reconnectTimer = setInterval(reconnectKnown, RECONNECT_MS);
-    notify();
-  });
-  peer.on("connection", (conn) => attachConn(conn, null));
-  peer.on("disconnected", () => {
-    // PeerJS drops idle peers from the signaling broker, which makes this device
-    // unreachable for NEW pairings/connections until it re-registers. Reconnect
-    // so it stays findable the whole time the tab is open.
-    brokerReady = false;
-    log("matchmaker: dropped — reconnecting…");
-    if (!destroyed) {
+  // Tear down the current peer and build a fresh one after `delay` ms. This is
+  // how we reclaim our own id when the broker still thinks a previous session
+  // holds it ("unavailable-id" / ghost) — we wait for that to time out, then
+  // re-register with the same id.
+  function scheduleRestart(delay) {
+    if (destroyed || restartTimer) return;
+    restartTimer = setTimeout(() => {
+      restartTimer = null;
+      if (destroyed) return;
+      if (reconnectTimer) {
+        clearInterval(reconnectTimer);
+        reconnectTimer = null;
+      }
       try {
-        peer.reconnect();
+        if (peer && !peer.destroyed) peer.destroy();
       } catch {
         /* ignore */
       }
+      startPeer();
+    }, delay);
+  }
+
+  function startPeer() {
+    if (destroyed) return;
+    peer = new Peer(self.id, { config: ICE_CONFIG });
+
+    peer.on("open", () => {
+      brokerReady = true;
+      log("matchmaker: connected — this device is now findable");
+      while (pendingJoins.length) joinFromPayload(pendingJoins.shift());
+      reconnectKnown();
+      if (!reconnectTimer) reconnectTimer = setInterval(reconnectKnown, RECONNECT_MS);
+      notify();
+    });
+
+    peer.on("connection", (conn) => attachConn(conn, null));
+
+    peer.on("disconnected", () => {
+      // The broker dropped this peer (idle timeout / flaky network). Try a plain
+      // reconnect first; if that can't reclaim the id, startPeer's error handler
+      // will schedule a full rebuild.
+      brokerReady = false;
+      log("matchmaker: dropped — reconnecting…");
+      notify();
+      if (!destroyed && peer && !peer.destroyed) {
+        try {
+          peer.reconnect();
+        } catch {
+          scheduleRestart(3000);
+        }
+      }
+    });
+
+    peer.on("error", (err) => {
+      const type = (err && err.type) || "error";
+      if (type === "unavailable-id") {
+        // Our id is still held by a very recent session of THIS device. Wait for
+        // the broker to release it, then rebuild and reclaim it. Keeps retrying.
+        brokerReady = false;
+        log("device id still held by a previous session — reclaiming shortly…");
+        notify();
+        scheduleRestart(5000);
+        return;
+      }
+      if (
+        type === "network" ||
+        type === "server-error" ||
+        type === "socket-error" ||
+        type === "socket-closed"
+      ) {
+        brokerReady = false;
+        log(`can't reach the matchmaker (${type}) — retrying…`);
+        notify();
+        scheduleRestart(3000);
+        return;
+      }
+      if (type === "peer-unavailable") {
+        log("the other device isn't reachable on the matchmaker right now");
+        return;
+      }
+      log(`connection error: ${type}`);
+    });
+  }
+
+  // Release our id on the broker when the tab really closes/reloads, so we don't
+  // leave a ghost that blocks the next session (the cause of unavailable-id).
+  const releaseOnUnload = (e) => {
+    if (e && e.type === "pagehide" && e.persisted) return; // bfcache, keep peer
+    try {
+      if (peer && !peer.destroyed) peer.destroy();
+    } catch {
+      /* ignore */
     }
-  });
-  peer.on("error", (err) => {
-    const type = (err && err.type) || "error";
-    // "peer-unavailable" = the other device isn't registered right now. During a
-    // pairing attempt that's the key symptom, so surface it (consecutive repeats
-    // from the background reconnect loop get collapsed by the log view).
-    if (type === "peer-unavailable") {
-      log("the other device isn't reachable on the matchmaker right now");
-      return;
-    }
-    if (type === "network" || type === "server-error" || type === "socket-error" || type === "socket-closed") {
-      log(`can't reach the matchmaker (${type})`);
-      return;
-    }
-    log(`connection error: ${type}`);
-  });
+  };
+  window.addEventListener("pagehide", releaseOnUnload);
+  window.addEventListener("beforeunload", releaseOnUnload);
+
+  startPeer();
 
   function destroy() {
     destroyed = true;
     if (reconnectTimer) clearInterval(reconnectTimer);
+    if (restartTimer) clearTimeout(restartTimer);
+    window.removeEventListener("pagehide", releaseOnUnload);
+    window.removeEventListener("beforeunload", releaseOnUnload);
     try {
-      peer.destroy();
+      if (peer && !peer.destroyed) peer.destroy();
     } catch {
       /* ignore */
     }
