@@ -7,7 +7,8 @@ const PAIRING_BANNER = {
   pairing: { text: "Linking to the other device…", cls: "banner--pending" },
   paired: { text: "Linked ✓", cls: "banner--ok" },
   failed: {
-    text: "Couldn't link. On the other device, tap Add device again and rescan.",
+    text:
+      "Couldn't link. Check the other device's tab is open and refreshed, try both on the same Wi-Fi, then tap Add device there and rescan.",
     cls: "banner--bad",
   },
 };

@@ -83,7 +83,7 @@ export function useMesh({ onItem } = {}) {
             joiningRef.current = false;
             setPairingStatus("failed");
           }
-        }, 12000);
+        }, 16000);
       }
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }

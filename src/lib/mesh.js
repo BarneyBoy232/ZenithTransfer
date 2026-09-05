@@ -20,6 +20,13 @@ const ICE_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    // Free public TURN relay (best-effort). When two devices can't reach each
+    // other directly — strict Wi-Fi, mobile data, symmetric NAT — the data is
+    // relayed through TURN instead of failing. For guaranteed reliability,
+    // swap these for your own credentials (Metered.ca free tier or Cloudflare).
+    { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+    { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" },
   ],
 };
 
@@ -308,14 +315,30 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
 
   // --- Pairing + device management -----------------------------------------
 
-  function joinFromPayload(payload) {
+  function joinFromPayload(payload, attempt = 0) {
     if (!payload || !payload.id || payload.id === self.id) return;
+    if (getDevices().some((d) => d.id === payload.id)) return; // already paired
     if (!peer.open) {
       pendingJoins.push(payload); // run once the broker connection is ready
       return;
     }
     const conn = peer.connect(payload.id, { reliable: true });
     attachConn(conn, payload);
+    // Pairing can fail transiently (the other device wasn't reachable yet, or a
+    // relay path was still being negotiated). If the channel hasn't opened
+    // shortly, close it and try again a few times before giving up.
+    setTimeout(() => {
+      if (destroyed) return;
+      const paired = getDevices().some((d) => d.id === payload.id);
+      if (!paired && !conn.open && attempt < 3) {
+        try {
+          conn.close();
+        } catch {
+          /* ignore */
+        }
+        joinFromPayload(payload, attempt + 1);
+      }
+    }, 3500);
   }
 
   function revoke(id) {
@@ -363,6 +386,18 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
     notify();
   });
   peer.on("connection", (conn) => attachConn(conn, null));
+  peer.on("disconnected", () => {
+    // PeerJS drops idle peers from the signaling broker, which makes this device
+    // unreachable for NEW pairings/connections until it re-registers. Reconnect
+    // so it stays findable the whole time the tab is open.
+    if (!destroyed) {
+      try {
+        peer.reconnect();
+      } catch {
+        /* ignore */
+      }
+    }
+  });
   peer.on("error", (err) => {
     // "peer-unavailable" just means a device is offline right now — keep trying.
     if (err && err.type === "peer-unavailable") return;
