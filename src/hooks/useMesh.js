@@ -21,6 +21,8 @@ export function useMesh({ onItem } = {}) {
   const [statuses, setStatuses] = useState({});
   const [transfers, setTransfers] = useState({});
   const [pairingStatus, setPairingStatus] = useState(null); // null|'pairing'|'paired'|'failed'
+  const [logs, setLogs] = useState([]);
+  const [brokerReady, setBrokerReady] = useState(false);
   const joiningRef = useRef(false);
   const failTimerRef = useRef(null);
   const paidTimerRef = useRef(null);
@@ -32,6 +34,20 @@ export function useMesh({ onItem } = {}) {
     setDevices(state.devices);
     setRules(state.rules);
     setStatuses(state.statuses);
+    setBrokerReady(!!state.brokerReady);
+  }, []);
+
+  // Diagnostics log. Consecutive identical lines collapse into one with a count
+  // so the background reconnect loop doesn't flood the view.
+  const addLog = useCallback((msg) => {
+    setLogs((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.msg === msg) {
+        return [...prev.slice(0, -1), { ...last, count: (last.count || 1) + 1, t: Date.now() }];
+      }
+      const next = [...prev, { msg, t: Date.now(), count: 1 }];
+      return next.length > 60 ? next.slice(next.length - 60) : next;
+    });
   }, []);
 
   const reportProgress = useCallback((p) => {
@@ -54,6 +70,7 @@ export function useMesh({ onItem } = {}) {
       onItem: (item) => onItemRef.current && onItemRef.current(item),
       onProgress: reportProgress,
       onChange: refresh,
+      onLog: addLog,
       onPaired: () => {
         refresh();
         // Only the device that scanned the link shows a "linked" banner. The
@@ -129,6 +146,8 @@ export function useMesh({ onItem } = {}) {
     connectedCount,
     pairingStatus,
     stopPairing,
+    logs,
+    brokerReady,
     sendText,
     sendFile,
     revoke,

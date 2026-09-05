@@ -81,7 +81,8 @@ body {
 .composer,
 .feed,
 .history,
-.chains {
+.chains,
+.diag {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -517,6 +518,61 @@ body {
   color: var(--text);
   padding: 8px 10px;
   font-size: 0.9rem;
+}
+
+/* Diagnostics */
+.diag__body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.diag__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+.diag__id {
+  font-size: 0.8rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+.diag__id code {
+  font-family: ui-monospace, monospace;
+}
+.diag__loghead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.diag__log {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-family: ui-monospace, monospace;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.diag__time {
+  color: var(--muted);
+}
+.diag__count {
+  color: var(--accent);
+}
+.diag__muted {
+  color: var(--muted);
 }
 
 @media (max-width: 480px) {

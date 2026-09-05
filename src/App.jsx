@@ -6,6 +6,7 @@ import DeviceManager from "./components/DeviceManager.jsx";
 import Composer from "./components/Composer.jsx";
 import Feed from "./components/Feed.jsx";
 import ChainManager from "./components/ChainManager.jsx";
+import Diagnostics from "./components/Diagnostics.jsx";
 import HistoryPanel from "./components/HistoryPanel.jsx";
 
 export default function App() {
@@ -30,6 +31,8 @@ export default function App() {
     connectedCount,
     pairingStatus,
     stopPairing,
+    logs,
+    brokerReady,
     sendText,
     sendFile,
     revoke,
@@ -77,6 +80,7 @@ export default function App() {
         <Composer disabled={connectedCount === 0} onSendText={sendText} onSendFile={sendFile} />
         <Feed items={items} transfers={transfers} />
         <ChainManager self={self} devices={devices} rules={rules} onSetRule={setRule} />
+        <Diagnostics self={self} brokerReady={brokerReady} logs={logs} />
         <HistoryPanel
           open={historyOpen}
           items={historyItems}

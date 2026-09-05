@@ -39,7 +39,7 @@ function uuid() {
   return crypto.randomUUID();
 }
 
-export function createMesh({ onItem, onProgress, onChange, onPaired }) {
+export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
   const self = getSelf();
   const peer = new Peer(self.id, { config: ICE_CONFIG });
 
@@ -49,9 +49,11 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
   const seenSet = new Set();
   let reconnectTimer = null;
   let destroyed = false;
+  let brokerReady = false;
   const pendingJoins = []; // pairing payloads waiting for the peer to open
 
   const notify = () => onChange && onChange();
+  const log = (msg) => onLog && onLog(msg); // human-readable diagnostics line
 
   function rememberSeen(msgId) {
     if (!msgId) return;
@@ -83,6 +85,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
     conn.on("open", () => {
       if (conn._pairPayload) {
         // We are joining someone: ask to pair.
+        log("pairing: channel open — sending request");
         conn.send({ t: "pair", id: self.id, name: self.name, secret: conn._pairPayload.secret });
         return;
       }
@@ -119,6 +122,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
       conns.set(dev.id, conn);
       if (msg.name && msg.name !== dev.name) upsertDevice({ id: dev.id, name: msg.name });
       conn.send({ t: "rules", rules: getRules() }); // share chain state
+      log(`connected to ${msg.name || dev.name}`);
       notify();
       return;
     }
@@ -126,7 +130,13 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
     // Someone scanned our QR and wants to pair.
     if (msg.t === "pair") {
       const secret = getPairingSecret();
-      if (!secret || msg.secret !== secret) {
+      if (!secret) {
+        log("pairing: request came in but no code is active here");
+        conn.close();
+        return;
+      }
+      if (msg.secret !== secret) {
+        log("pairing: request rejected — code didn't match");
         conn.close();
         return;
       }
@@ -134,6 +144,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
       conns.set(msg.id, conn);
       conn.send({ t: "pair-ok", id: self.id, name: self.name });
       conn.send({ t: "rules", rules: getRules() });
+      log(`pairing: linked with ${msg.name || "a device"} ✓`);
       notify();
       onPaired && onPaired(msg.id);
       return;
@@ -145,6 +156,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
       upsertDevice({ id: p.id, name: msg.name || p.name || "Device", secret: p.secret });
       conns.set(p.id, conn);
       delete conn._pairPayload;
+      log(`pairing: linked with ${msg.name || p.name || "a device"} ✓`);
       notify();
       onPaired && onPaired(p.id);
       return;
@@ -322,6 +334,11 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
       pendingJoins.push(payload); // run once the broker connection is ready
       return;
     }
+    log(
+      attempt === 0
+        ? "pairing: reaching the other device…"
+        : `pairing: retry ${attempt} — reaching the other device…`
+    );
     const conn = peer.connect(payload.id, { reliable: true });
     attachConn(conn, payload);
     // Pairing can fail transiently (the other device wasn't reachable yet, or a
@@ -380,6 +397,8 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
   }
 
   peer.on("open", () => {
+    brokerReady = true;
+    log("matchmaker: connected — this device is now findable");
     while (pendingJoins.length) joinFromPayload(pendingJoins.shift());
     reconnectKnown();
     reconnectTimer = setInterval(reconnectKnown, RECONNECT_MS);
@@ -390,6 +409,8 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
     // PeerJS drops idle peers from the signaling broker, which makes this device
     // unreachable for NEW pairings/connections until it re-registers. Reconnect
     // so it stays findable the whole time the tab is open.
+    brokerReady = false;
+    log("matchmaker: dropped — reconnecting…");
     if (!destroyed) {
       try {
         peer.reconnect();
@@ -399,8 +420,19 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
     }
   });
   peer.on("error", (err) => {
-    // "peer-unavailable" just means a device is offline right now — keep trying.
-    if (err && err.type === "peer-unavailable") return;
+    const type = (err && err.type) || "error";
+    // "peer-unavailable" = the other device isn't registered right now. During a
+    // pairing attempt that's the key symptom, so surface it (consecutive repeats
+    // from the background reconnect loop get collapsed by the log view).
+    if (type === "peer-unavailable") {
+      log("the other device isn't reachable on the matchmaker right now");
+      return;
+    }
+    if (type === "network" || type === "server-error" || type === "socket-error" || type === "socket-closed") {
+      log(`can't reach the matchmaker (${type})`);
+      return;
+    }
+    log(`connection error: ${type}`);
   });
 
   function destroy() {
@@ -415,7 +447,12 @@ export function createMesh({ onItem, onProgress, onChange, onPaired }) {
 
   return {
     self,
-    getState: () => ({ devices: getDevices(), rules: getActiveRules(), statuses: statuses() }),
+    getState: () => ({
+      devices: getDevices(),
+      rules: getActiveRules(),
+      statuses: statuses(),
+      brokerReady,
+    }),
     sendText,
     sendFile,
     joinFromPayload,
