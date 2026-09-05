@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Looks like a link if it's a single token starting with a URL scheme or www.
 function looksLikeLink(text) {
@@ -6,20 +6,26 @@ function looksLikeLink(text) {
   return /^(https?:\/\/|www\.)\S+$/i.test(t) && !/\s/.test(t);
 }
 
-export default function Composer({ disabled, onSendText, onSendFile }) {
+export default function Composer({ disabled, connectedDevices = [], onSendText, onSendFile }) {
   const [text, setText] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [target, setTarget] = useState(""); // "" = all connected devices
   const fileInput = useRef(null);
+
+  // If the chosen target goes offline, fall back to "all" so sends still work.
+  useEffect(() => {
+    if (target && !connectedDevices.some((d) => d.id === target)) setTarget("");
+  }, [connectedDevices, target]);
 
   const sendTypedText = () => {
     const value = text.trim();
     if (!value) return;
-    onSendText(looksLikeLink(value) ? "link" : "text", value);
+    onSendText(looksLikeLink(value) ? "link" : "text", value, target || undefined);
     setText("");
   };
 
   const sendFiles = (fileList) => {
-    for (const file of fileList) onSendFile(file);
+    for (const file of fileList) onSendFile(file, target || undefined);
   };
 
   // Paste handler: images on the clipboard become files; text fills the box.
@@ -30,7 +36,7 @@ export default function Composer({ disabled, onSendText, onSendFile }) {
       if (item.kind === "file") {
         const file = item.getAsFile();
         if (file) {
-          onSendFile(file);
+          onSendFile(file, target || undefined);
           handledFile = true;
         }
       }
@@ -54,6 +60,20 @@ export default function Composer({ disabled, onSendText, onSendFile }) {
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
     >
+      {/* Choose a specific device, or leave on "all" (the default). Only shown
+          when more than one device is connected. */}
+      {connectedDevices.length > 1 && (
+        <label className="composer__target">
+          Send to
+          <select value={target} disabled={disabled} onChange={(e) => setTarget(e.target.value)}>
+            <option value="">all connected devices</option>
+            {connectedDevices.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <textarea
         className="composer__text"
         placeholder={

@@ -179,6 +179,26 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
       return;
     }
 
+    // A device we trust is introducing us to another device (transitive link).
+    // We add that peer with the shared secret it supplies, then connect directly
+    // — from here on we reach them without the introducer in the middle.
+    if (msg.t === "introduce") {
+      const introducerId = connDeviceId(conn);
+      if (!introducerId) return; // only trust introductions from a paired device
+      const p = msg.peer;
+      if (p && p.id && p.id !== self.id) {
+        const already = getDevices().some((d) => d.id === p.id);
+        upsertDevice({ id: p.id, name: p.name || "Device", secret: p.secret });
+        const introName = getDevices().find((d) => d.id === introducerId)?.name || "a device";
+        log(`${already ? "re-linked" : "linked"} with ${p.name || "a device"} (introduced by ${introName})`);
+        notify();
+        if (peer && peer.open && !conns.has(p.id)) {
+          attachConn(peer.connect(p.id, { reliable: true }), null);
+        }
+      }
+      return;
+    }
+
     // Anything else is a data message — only accept it from a verified device.
     const fromId = connDeviceId(conn);
     if (!fromId) return;
@@ -275,16 +295,26 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
     });
   }
 
-  function sendText(kind, content) {
-    const targets = openConns();
+  // Pick who a send goes to. targetId null/undefined = every connected device
+  // (default); a specific id = only that device (must be directly connected).
+  function targetsFor(targetId) {
+    if (targetId) {
+      const c = conns.get(targetId);
+      return c && c.open ? [c] : [];
+    }
+    return openConns();
+  }
+
+  function sendText(kind, content, targetId) {
+    const targets = targetsFor(targetId);
     const msg = { ...envelope(), t: "text", kind, content };
     for (const c of targets) c.send(msg);
     onItem && onItem({ id: uuid(), dir: "out", from: self.name, kind, content, at: Date.now() });
     return targets.length;
   }
 
-  async function sendFile(file) {
-    const targets = openConns();
+  async function sendFile(file, targetId) {
+    const targets = targetsFor(targetId);
     if (!targets.length) return 0;
     const fileId = uuid();
     const kind = (file.type || "").startsWith("image/") ? "image" : "file";
@@ -372,6 +402,25 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
       }
     }
     notify();
+  }
+
+  // Introduce two of THIS device's paired devices to each other so they link
+  // directly (no QR, and afterwards they connect without this device relaying).
+  // Both must be connected to us right now so we can deliver the introduction.
+  function introduce(aId, bId) {
+    if (!aId || !bId || aId === bId) return { ok: false, reason: "pick two different devices" };
+    const a = conns.get(aId);
+    const b = conns.get(bId);
+    if (!a || !a.open || !b || !b.open) {
+      return { ok: false, reason: "both devices must be online right now" };
+    }
+    const da = getDevices().find((d) => d.id === aId);
+    const db = getDevices().find((d) => d.id === bId);
+    const secret = uuid(); // shared secret the two will use to trust each other
+    a.send({ t: "introduce", peer: { id: bId, name: db ? db.name : "Device", secret } });
+    b.send({ t: "introduce", peer: { id: aId, name: da ? da.name : "Device", secret } });
+    log(`introduced ${da?.name || "a device"} ↔ ${db?.name || "a device"} — they can now link directly`);
+    return { ok: true };
   }
 
   function broadcastRules() {
@@ -522,6 +571,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
     joinFromPayload,
     revoke,
     setRule,
+    introduce,
     destroy,
   };
 }

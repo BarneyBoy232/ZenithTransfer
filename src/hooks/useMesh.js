@@ -113,10 +113,11 @@ export function useMesh({ onItem } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const sendText = useCallback((kind, content) => meshRef.current?.sendText(kind, content), []);
-  const sendFile = useCallback((file) => meshRef.current?.sendFile(file), []);
+  const sendText = useCallback((kind, content, targetId) => meshRef.current?.sendText(kind, content, targetId), []);
+  const sendFile = useCallback((file, targetId) => meshRef.current?.sendFile(file, targetId), []);
   const revoke = useCallback((id) => meshRef.current?.revoke(id), []);
   const setRule = useCallback((rule) => meshRef.current?.setRule(rule), []);
+  const introduce = useCallback((aId, bId) => meshRef.current?.introduce(aId, bId), []);
 
   const renameSelf = useCallback((name) => {
     const updated = persistSelfName(name);
@@ -152,6 +153,7 @@ export function useMesh({ onItem } = {}) {
     sendFile,
     revoke,
     setRule,
+    introduce,
     renameSelf,
     createPairingUrl,
   };

@@ -82,11 +82,74 @@ body {
 .feed,
 .history,
 .chains,
-.diag {
+.diag,
+.linkdev {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
+}
+
+/* Send-target picker */
+.composer__target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.composer__target select {
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+/* Direct linking (transitive) */
+.linkdev__body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.linkdev__hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 0;
+}
+.linkdev__row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.linkdev__row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.linkdev__row select {
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+.linkdev__ok {
+  color: var(--good);
+  font-size: 0.88rem;
+  margin: 0;
+}
+.linkdev__warn {
+  color: var(--warn);
+  font-size: 0.88rem;
+  margin: 0;
 }
 
 /* Status */

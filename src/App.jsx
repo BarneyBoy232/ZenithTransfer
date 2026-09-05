@@ -6,6 +6,7 @@ import DeviceManager from "./components/DeviceManager.jsx";
 import Composer from "./components/Composer.jsx";
 import Feed from "./components/Feed.jsx";
 import ChainManager from "./components/ChainManager.jsx";
+import LinkDevices from "./components/LinkDevices.jsx";
 import Diagnostics from "./components/Diagnostics.jsx";
 import HistoryPanel from "./components/HistoryPanel.jsx";
 
@@ -37,9 +38,13 @@ export default function App() {
     sendFile,
     revoke,
     setRule,
+    introduce,
     renameSelf,
     createPairingUrl,
   } = useMesh({ onItem: handleItem });
+
+  // Devices that are connected right now (for the send-target picker).
+  const connectedDevices = devices.filter((d) => statuses[d.id]);
 
   useEffect(() => {
     if (historyOpen && !historyLoaded.current) {
@@ -77,8 +82,14 @@ export default function App() {
           onStopPairing={stopPairing}
           createPairingUrl={createPairingUrl}
         />
-        <Composer disabled={connectedCount === 0} onSendText={sendText} onSendFile={sendFile} />
+        <Composer
+          disabled={connectedCount === 0}
+          connectedDevices={connectedDevices}
+          onSendText={sendText}
+          onSendFile={sendFile}
+        />
         <Feed items={items} transfers={transfers} />
+        <LinkDevices devices={devices} statuses={statuses} onIntroduce={introduce} />
         <ChainManager self={self} devices={devices} rules={rules} onSetRule={setRule} />
         <Diagnostics self={self} brokerReady={brokerReady} logs={logs} />
         <HistoryPanel
