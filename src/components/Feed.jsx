@@ -1,4 +1,5 @@
-// Turn a byte count into something readable like "2.3 MB".
+import Icon from "./Icon.jsx";
+
 function formatSize(bytes) {
   if (bytes == null) return "";
   const units = ["B", "KB", "MB", "GB"];
@@ -11,90 +12,89 @@ function formatSize(bytes) {
   return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
-function ItemCard({ item }) {
-  const dirLabel =
-    item.dir === "out" ? "Sent" : item.from ? `From ${item.from}` : "Received";
+function metaLine(item) {
+  const who = item.dir === "out" ? "Sent" : item.from ? `From ${item.from}` : "Received";
+  const size = item.size ? ` · ${formatSize(item.size)}` : "";
+  return who + size;
+}
 
-  if (item.kind === "link") {
-    return (
-      <article className={`card card--${item.dir}`}>
-        <div className="card__tag">{dirLabel} · link</div>
-        <a className="card__link" href={item.content} target="_blank" rel="noreferrer">
-          {item.content}
-        </a>
-        <CopyButton value={item.content} />
-      </article>
-    );
+async function copyText(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    /* ignore */
   }
+}
 
-  if (item.kind === "text") {
-    return (
-      <article className={`card card--${item.dir}`}>
-        <div className="card__tag">{dirLabel} · text</div>
-        <p className="card__text">{item.content}</p>
-        <CopyButton value={item.content} />
-      </article>
-    );
-  }
-
+function Row({ item }) {
   if (item.kind === "image") {
     return (
-      <article className={`card card--${item.dir}`}>
-        <div className="card__tag">{dirLabel} · image · {formatSize(item.size)}</div>
-        {item.url && <img className="card__image" src={item.url} alt={item.name || "image"} />}
+      <div className="item">
+        <div className="item__thumb">{item.url && <img src={item.url} alt={item.name || "image"} />}</div>
+        <div className="item__body">
+          <div className="item__name">{item.name || "image"}</div>
+          <div className="item__meta">{metaLine(item)}</div>
+        </div>
         {item.url && (
-          <a className="btn btn--ghost" href={item.url} download={item.name || "image"}>
-            Download
+          <a className="item__action" href={item.url} download={item.name || "image"} aria-label="Download">
+            <Icon name="download" />
           </a>
         )}
-      </article>
+      </div>
     );
   }
 
-  // Generic file
-  return (
-    <article className={`card card--${item.dir}`}>
-      <div className="card__tag">{dirLabel} · file · {formatSize(item.size)}</div>
-      <div className="card__file">📄 {item.name}</div>
-      {item.url ? (
-        <a className="btn btn--ghost" href={item.url} download={item.name || "file"}>
-          Download
-        </a>
-      ) : (
-        <span className="card__muted">Too large to keep in history</span>
-      )}
-    </article>
-  );
-}
-
-function CopyButton({ value }) {
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      /* ignore */
-    }
-  };
-  return (
-    <button className="btn btn--ghost btn--small" onClick={copy}>
-      Copy
-    </button>
-  );
-}
-
-export default function Feed({ items, transfers }) {
-  const active = Object.entries(transfers || {});
-
-  if (!items.length && !active.length) {
+  if (item.kind === "file") {
     return (
-      <section className="feed feed--empty">
-        <p>Nothing yet. Anything you send from either device shows up here instantly.</p>
-      </section>
+      <div className="item">
+        <div className="item__icon"><Icon name="file" /></div>
+        <div className="item__body">
+          <div className="item__name">{item.name}</div>
+          <div className="item__meta">{metaLine(item)}</div>
+        </div>
+        {item.url ? (
+          <a className="item__action" href={item.url} download={item.name || "file"} aria-label="Download">
+            <Icon name="download" />
+          </a>
+        ) : (
+          <span className="item__meta">too large to keep</span>
+        )}
+      </div>
     );
   }
+
+  const isLink = item.kind === "link";
+  return (
+    <div className="item">
+      <div className="item__icon"><Icon name={isLink ? "link" : "text"} /></div>
+      <div className="item__body">
+        {isLink ? (
+          <a className="item__name item__link" href={item.content} target="_blank" rel="noreferrer">
+            {item.content}
+          </a>
+        ) : (
+          <div className="item__name item__text">{item.content}</div>
+        )}
+        <div className="item__meta">{metaLine(item)}</div>
+      </div>
+      <button className="item__action" onClick={() => copyText(item.content)} aria-label="Copy">
+        <Icon name="copy" />
+      </button>
+    </div>
+  );
+}
+
+export default function Feed({ items, transfers, label = "Activity", emptyText = "Anything you send or receive appears here." }) {
+  const active = Object.entries(transfers || {});
 
   return (
     <section className="feed">
+      {label && <div className="feed__label">{label}</div>}
+
+      {active.length === 0 && items.length === 0 && emptyText && (
+        <p className="feed__empty">{emptyText}</p>
+      )}
+
       {active.map(([id, t]) => (
         <div key={id} className="progress">
           <div className="progress__label">
@@ -105,8 +105,9 @@ export default function Feed({ items, transfers }) {
           </div>
         </div>
       ))}
+
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} />
+        <Row key={item.id} item={item} />
       ))}
     </section>
   );

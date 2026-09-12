@@ -23,7 +23,7 @@ export default function Logo({ size = 40 }) {
       <path
         d="M25 13 L25 27 M21 23 L25 27 L29 23"
         fill="none"
-        stroke="var(--accent-2)"
+        stroke="var(--accent)"
         strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"

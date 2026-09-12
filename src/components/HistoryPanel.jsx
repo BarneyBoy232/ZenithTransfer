@@ -17,7 +17,7 @@ export default function HistoryPanel({ open, items, onToggle, onClear }) {
       </div>
       {open &&
         (items.length ? (
-          <Feed items={items} transfers={{}} />
+          <Feed items={items} transfers={{}} label="" emptyText="" />
         ) : (
           <p className="history__empty">No saved items on this device yet.</p>
         ))}

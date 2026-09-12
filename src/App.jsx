@@ -2,22 +2,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMesh } from "./hooks/useMesh.js";
 import { clearHistory, loadItems, saveItem } from "./lib/history.js";
 import Logo from "./components/Logo.jsx";
-import DeviceManager from "./components/DeviceManager.jsx";
+import Icon from "./components/Icon.jsx";
 import Composer from "./components/Composer.jsx";
 import Feed from "./components/Feed.jsx";
-import ChainManager from "./components/ChainManager.jsx";
+import Drawer from "./components/Drawer.jsx";
+import DeviceManager from "./components/DeviceManager.jsx";
 import LinkDevices from "./components/LinkDevices.jsx";
+import ChainManager from "./components/ChainManager.jsx";
 import Diagnostics from "./components/Diagnostics.jsx";
 import HistoryPanel from "./components/HistoryPanel.jsx";
 
 export default function App() {
   const [items, setItems] = useState([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
   const historyLoaded = useRef(false);
 
-  // Every sent or received item shows at the top of the feed and is saved to
-  // this device's own local history.
   const handleItem = useCallback((item) => {
     setItems((prev) => [item, ...prev]);
     saveItem(item);
@@ -43,7 +44,6 @@ export default function App() {
     createPairingUrl,
   } = useMesh({ onItem: handleItem });
 
-  // Devices that are connected right now (for the send-target picker).
   const connectedDevices = devices.filter((d) => statuses[d.id]);
 
   useEffect(() => {
@@ -58,19 +58,55 @@ export default function App() {
     setHistoryItems([]);
   };
 
+  // Status pill wording: how many devices are online (or the linking state).
+  const statusLabel =
+    connectedCount > 0
+      ? `${connectedCount} online`
+      : devices.length > 0
+      ? "offline"
+      : brokerReady
+      ? "no devices"
+      : "connecting…";
+  const statusOn = connectedCount > 0;
+
   return (
     <div className="app">
-      <header className="app__header">
-        <h1 className="app__logo">
-          <Logo size={40} />
-          <span className="app__logo-text">
-            Zenith<span className="app__logo-accent">Transfer</span>
+      <header className="topbar">
+        <div className="topbar__brand">
+          <Logo size={30} />
+          <span className="topbar__name">
+            Zenith<span className="topbar__accent">Transfer</span>
           </span>
-        </h1>
-        <p className="app__tag">Link your devices once. Send anything, any time they're both open.</p>
+        </div>
+        <div className="topbar__right">
+          <button
+            className={`statuspill ${statusOn ? "statuspill--on" : ""}`}
+            onClick={() => setDrawerOpen(true)}
+          >
+            <span className={`dot dot--${statusOn ? "connected" : brokerReady ? "waiting" : "error"}`} />
+            {statusLabel}
+          </button>
+          <button className="iconbtn" onClick={() => setDrawerOpen(true)} aria-label="Settings">
+            <Icon name="settings" />
+          </button>
+        </div>
       </header>
 
-      <main className="app__main">
+      <main className="main">
+        <Composer
+          disabled={connectedCount === 0}
+          connectedDevices={connectedDevices}
+          onSendText={sendText}
+          onSendFile={sendFile}
+        />
+        <Feed items={items} transfers={transfers} />
+      </main>
+
+      <footer className="app__footer">
+        Sent directly between your devices — nothing is stored on a server.
+      </footer>
+
+      <Drawer open={drawerOpen} title="Devices & settings" onClose={() => setDrawerOpen(false)}>
         <DeviceManager
           self={self}
           devices={devices}
@@ -82,27 +118,16 @@ export default function App() {
           onStopPairing={stopPairing}
           createPairingUrl={createPairingUrl}
         />
-        <Composer
-          disabled={connectedCount === 0}
-          connectedDevices={connectedDevices}
-          onSendText={sendText}
-          onSendFile={sendFile}
-        />
-        <Feed items={items} transfers={transfers} />
         <LinkDevices devices={devices} statuses={statuses} onIntroduce={introduce} />
         <ChainManager self={self} devices={devices} rules={rules} onSetRule={setRule} />
-        <Diagnostics self={self} brokerReady={brokerReady} logs={logs} />
         <HistoryPanel
           open={historyOpen}
           items={historyItems}
           onToggle={() => setHistoryOpen((v) => !v)}
           onClear={onClearHistory}
         />
-      </main>
-
-      <footer className="app__footer">
-        Items stream directly between your devices — nothing is stored on a server. Devices must be open at the same time to transfer.
-      </footer>
+        <Diagnostics self={self} brokerReady={brokerReady} logs={logs} />
+      </Drawer>
     </div>
   );
 }
