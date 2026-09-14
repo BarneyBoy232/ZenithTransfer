@@ -22,8 +22,9 @@ export default function Diagnostics({ self, brokerReady, logs }) {
 
   return (
     <section className="diag">
-      <button className="btn btn--ghost btn--small" onClick={() => setOpen((v) => !v)}>
-        {open ? "Hide connection details" : "Connection details"}
+      <button className="section-toggle" onClick={() => setOpen((v) => !v)}>
+        <span>Connection details</span>
+        <span className="section-toggle__hint">{open ? "hide" : brokerReady ? "connected" : "troubleshoot"}</span>
       </button>
 
       {open && (

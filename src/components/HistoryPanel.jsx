@@ -6,12 +6,13 @@ export default function HistoryPanel({ open, items, onToggle, onClear }) {
   return (
     <section className="history">
       <div className="history__head">
-        <button className="btn btn--ghost btn--small" onClick={onToggle}>
-          {open ? "Hide history" : `Saved on this device (${items.length})`}
+        <button className="section-toggle" onClick={onToggle}>
+          <span>History{items.length ? ` (${items.length})` : ""}</span>
+          <span className="section-toggle__hint">{open ? "hide" : "saved on this device"}</span>
         </button>
         {open && items.length > 0 && (
           <button className="btn btn--ghost btn--small" onClick={onClear}>
-            Clear history
+            Clear
           </button>
         )}
       </div>

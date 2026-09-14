@@ -106,7 +106,7 @@ export default function App() {
         Sent directly between your devices — nothing is stored on a server.
       </footer>
 
-      <Drawer open={drawerOpen} title="Devices & settings" onClose={() => setDrawerOpen(false)}>
+      <Drawer open={drawerOpen} title="Devices" onClose={() => setDrawerOpen(false)}>
         <DeviceManager
           self={self}
           devices={devices}

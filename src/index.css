@@ -78,13 +78,9 @@ body {
   font-size: 0.95rem;
 }
 
-/* Shared panel look (cards) */
-.composer,
-.devices,
-.history,
-.chains,
-.diag,
-.linkdev {
+/* The composer is the one true card (the hero). Drawer sections are flat and
+   separated by hairlines instead of being individual cards. */
+.composer {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -877,10 +873,56 @@ body {
 .drawer__body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 4px 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+}
+/* Sections flow as one panel, divided by hairlines — not stacked cards. */
+.drawer__body > * {
+  padding: 16px 0;
+}
+.drawer__body > * + * {
+  border-top: 1px solid var(--border);
+}
+/* A full-width section header row (used by collapsible sections). */
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+.section-toggle:hover {
+  color: var(--accent);
+}
+.section-toggle__hint {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+.history__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.history__head .section-toggle {
+  flex: 1;
+}
+.section-title {
+  font-size: 0.98rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.section-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: -4px 0 12px;
 }
 
 @media (max-width: 480px) {

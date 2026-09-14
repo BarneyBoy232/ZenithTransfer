@@ -33,8 +33,9 @@ export default function ChainManager({ self, devices, rules, onSetRule }) {
 
   return (
     <section className="chains">
-      <button className="btn btn--ghost btn--small" onClick={() => setOpen((v) => !v)}>
-        {open ? "Hide chains" : `Chains (${rules.length})`}
+      <button className="section-toggle" onClick={() => setOpen((v) => !v)}>
+        <span>Chains{rules.length ? ` (${rules.length})` : ""}</span>
+        <span className="section-toggle__hint">{open ? "hide" : "forwarding"}</span>
       </button>
 
       {open && (
