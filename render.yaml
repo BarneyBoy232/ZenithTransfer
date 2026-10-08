@@ -1,0 +1,11 @@
+# One-click deploy of the signaling server to Render (free tier).
+# In Render: New → Blueprint → connect this GitHub repo → it reads this file.
+services:
+  - type: web
+    name: zenithtransfer-signal
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /

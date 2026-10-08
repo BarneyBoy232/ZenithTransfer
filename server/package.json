@@ -1,0 +1,16 @@
+{
+  "name": "zenithtransfer-signal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ZenithTransfer signaling server (PeerJS). Introduces devices only — no files or data pass through it.",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "peer": "^1.0.2"
+  }
+}

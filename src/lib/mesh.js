@@ -35,6 +35,22 @@ const HIGH_WATER = 8 * 1024 * 1024;
 const LOW_WATER = 1 * 1024 * 1024;
 const RECONNECT_MS = 4000;
 
+// Options for `new Peer(...)`. If VITE_PEER_HOST is set we use our own signaling
+// server (reliable); otherwise we fall back to the public PeerJS cloud.
+function peerOptions() {
+  const host = import.meta.env.VITE_PEER_HOST;
+  if (host) {
+    return {
+      host,
+      port: Number(import.meta.env.VITE_PEER_PORT) || 443,
+      path: import.meta.env.VITE_PEER_PATH || "/rtc",
+      secure: import.meta.env.VITE_PEER_SECURE !== "false",
+      config: ICE_CONFIG,
+    };
+  }
+  return { config: ICE_CONFIG };
+}
+
 function uuid() {
   return crypto.randomUUID();
 }
@@ -470,7 +486,7 @@ export function createMesh({ onItem, onProgress, onChange, onPaired, onLog }) {
 
   function startPeer() {
     if (destroyed) return;
-    peer = new Peer(self.id, { config: ICE_CONFIG });
+    peer = new Peer(self.id, peerOptions());
 
     peer.on("open", () => {
       brokerReady = true;
