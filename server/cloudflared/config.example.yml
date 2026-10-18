@@ -1,0 +1,13 @@
+# Cloudflare Tunnel config for the ZenithTransfer signaling server.
+# Copy to config.yml and fill in your tunnel id + credentials path.
+# This routes a public hostname -> the signaling server running on this machine.
+# WebSockets pass through automatically, so no extra settings are needed.
+
+tunnel: REPLACE_WITH_TUNNEL_ID
+credentials-file: REPLACE_WITH_PATH_TO/REPLACE_WITH_TUNNEL_ID.json
+
+ingress:
+  - hostname: peer.zenithurl.com
+    service: http://localhost:9000
+  # Everything else gets a 404.
+  - service: http_status:404
